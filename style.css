@@ -1,0 +1,15 @@
+body {
+    background-color: #f8f9fa;
+}
+.navbar{
+    margin-bottom: 10px;
+}
+.table td, .table th{
+    vertical-align: middle;
+}
+.btn-sm{
+    margin: 2px;
+}
+.card{
+    border-radius: 10px;
+}

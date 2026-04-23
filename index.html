@@ -1,0 +1,195 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Inventory Management System</title>
+    <!-- Bootstrap handles all CSS for us -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+
+    <!-- Top Navbar -->
+    <nav class="navbar navbar-dark bg-dark px-4">
+        <span class="navbar-brand fw-bold fs-4">📦 Inventory Management System</span>
+    </nav>
+
+    <div class="container-fluid mt-4">
+        <div class="row">
+
+            <!-- LEFT SIDE — Add Product Form -->
+            <div class="col-md-3">
+                <div class="card shadow">
+                    <div class="card-header bg-dark text-white fw-bold">
+                        ➕ Add New Product
+                    </div>
+                    <div class="card-body">
+                        <form action="/add" method="POST">
+                            <div class="mb-3">
+                                <label class="form-label">Product Name</label>
+                                <input type="text" name="name" class="form-control" required>
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label">Category</label>
+                                <input type="text" name="category" class="form-control" required>
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label">Quantity</label>
+                                <input type="number" name="quantity" class="form-control" required>
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label">Price (₹)</label>
+                                <input type="number" step="0.01" name="price" class="form-control" required>
+                            </div>
+                            <button type="submit" class="btn btn-success w-100">
+                                Add Product
+                            </button>
+                        </form>
+                    </div>
+                </div>
+
+                <!-- Low Stock Alert Box -->
+                {% if low_stock %}
+                <div class="card shadow mt-4 border-danger">
+                    <div class="card-header bg-danger text-white fw-bold">
+                        ⚠️ Low Stock Alert
+                    </div>
+                    <ul class="list-group list-group-flush">
+                        {% for item in low_stock %}
+                        <li class="list-group-item text-danger">
+                            {{ item[1] }} — only {{ item[3] }} left!
+                        </li>
+                        {% endfor %}
+                    </ul>
+                </div>
+                {% endif %}
+            </div>
+
+            <!-- RIGHT SIDE — Products Table -->
+            <div class="col-md-9">
+
+                <!-- Search Bar -->
+                <form action="/search" method="GET" class="mb-3 d-flex gap-2">
+                    <input type="text" name="keyword" class="form-control"
+                        placeholder="🔍 Search by name or category..."
+                        value="{{ keyword if keyword else '' }}">
+                    <button type="submit" class="btn btn-primary">Search</button>
+                    <a href="/" class="btn btn-secondary">Clear</a>
+                </form>
+
+                <!-- Products Table -->
+                <div class="card shadow">
+                    <div class="card-header bg-dark text-white fw-bold">
+                        📋 Products List
+                    </div>
+                    <div class="card-body p-0">
+                        <table class="table table-hover table-striped mb-0">
+                            <thead class="table-dark">
+                                <tr>
+                                    <th>ID</th>
+                                    <th>Name</th>
+                                    <th>Category</th>
+                                    <th>Quantity</th>
+                                    <th>Price (₹)</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for product in products %}
+                                <tr class="{{ 'table-danger' if product[3] < 10 else '' }}">
+                                    <td>{{ product[0] }}</td>
+                                    <td>{{ product[1] }}</td>
+                                    <td>{{ product[2] }}</td>
+                                    <td>{{ product[3] }}</td>
+                                    <td>₹{{ product[4] }}</td>
+                                    <td>
+                                        <!-- Delete Button -->
+                                        <a href="/delete/{{ product[0] }}"
+                                            class="btn btn-danger btn-sm"
+                                            onclick="return confirm('Delete this product?')">
+                                            🗑 Delete
+                                        </a>
+                                        <!-- Edit Button -->
+                                        <button class="btn btn-warning btn-sm"
+                                            onclick="fillEditForm({{ product[0] }},
+                                            '{{ product[1] }}',
+                                            '{{ product[2] }}',
+                                            {{ product[3] }},
+                                            {{ product[4] }})">
+                                            ✏️ Edit
+                                        </button>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+
+                                {% if products|length == 0 %}
+                                <tr>
+                                    <td colspan="6" class="text-center text-muted py-4">
+                                        No products found. Add one!
+                                    </td>
+                                </tr>
+                                {% endif %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Edit Product Modal -->
+    <div class="modal fade" id="editModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header bg-dark text-white">
+                    <h5 class="modal-title">✏️ Edit Product</h5>
+                    <button type="button" class="btn-close btn-close-white"
+                        data-bs-dismiss="modal"></button>
+                </div>
+                <form id="editForm" method="POST">
+                    <div class="modal-body">
+                        <div class="mb-3">
+                            <label class="form-label">Product Name</label>
+                            <input type="text" name="name" id="edit_name" class="form-control" required>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Category</label>
+                            <input type="text" name="category" id="edit_category" class="form-control" required>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Quantity</label>
+                            <input type="number" name="quantity" id="edit_quantity" class="form-control" required>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Price (₹)</label>
+                            <input type="number" step="0.01" name="price" id="edit_price" class="form-control" required>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="submit" class="btn btn-success w-100">
+                            Update Product
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Bootstrap JS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+
+    <!-- Edit Form Logic -->
+    <script>
+        function fillEditForm(id, name, category, quantity, price) {
+            document.getElementById("edit_name").value = name;
+            document.getElementById("edit_category").value = category;
+            document.getElementById("edit_quantity").value = quantity;
+            document.getElementById("edit_price").value = price;
+            document.getElementById("editForm").action = "/update/" + id;
+            new bootstrap.Modal(document.getElementById("editModal")).show();
+        }
+    </script>
+
+</body>
+</html>
